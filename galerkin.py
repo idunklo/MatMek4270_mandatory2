@@ -308,6 +308,7 @@ class Cosines(Trigonometric):
     def __init__(
         self, N: int, domain: Domain = (0, 1), bc: BC = (0, 0), constraint: int = 0
     ) -> None:
+        Trigonometric.__init__(self, N, domain=domain)
         self.B = Neumann(bc, domain, self.reference_domain)
 
     @overload
