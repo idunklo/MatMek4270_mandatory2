@@ -154,8 +154,9 @@ class Polynomial(FunctionSpace):
 
     @property
     def reference_domain(self) -> Domain:
-        raise NotImplementedError
-
+        """Return the default reference domain `(-1, 1)` shared by `Legendre` and `Chebyshev`"""
+        return (-1, 1)
+    
     @overload
     def basis_function(self, j: int, sympy: Literal[True]) -> sp.Expr: ...
     @overload
@@ -164,10 +165,13 @@ class Polynomial(FunctionSpace):
     def basis_function(self, j, sympy=False): ...
 
     def derivative_basis_function(self, j: int, k: int = 1) -> ABCPolyBase:
-        raise NotImplementedError
+        """the k'th derivative of `basis_function(j)"""
+        return self.basis_function(j).deriv(k)
 
     def mass_matrix(self) -> sparse.spmatrix:
-        raise NotImplementedError
+        """the (diagonal) mass matrix built from `self.L2_norm_sq`"""
+        m = self.L2_norm_sq(self.N + 1)
+        return sparse.diags([m], [0], (self.N + 1, self.N + 1), format="csr")
 
 
 class Legendre(Polynomial):
@@ -186,7 +190,8 @@ class Legendre(Polynomial):
         return Leg.basis(j)
 
     def L2_norm_sq(self, N: int) -> np.ndarray:
-        raise NotImplementedError
+        """The squared L2 norms of the Legendre polynomials"""
+        return 2 / (2* np.arange(N) + 1)
 
     def eval(self, uh: np.ndarray, xj: np.ndarray | float) -> np.ndarray:
         xj = np.atleast_1d(xj)
@@ -213,10 +218,17 @@ class Chebyshev(Polynomial):
         return 1 / sp.sqrt(1 - x**2)
 
     def L2_norm_sq(self, N: int) -> np.ndarray:
-        raise NotImplementedError
+        """The squared L2 norms of the Legendre polynomials"""
+
+        norms = np.full(N, np.pi/2)
+        norms[0] = np.pi
+
+        return norms
 
     def eval(self, uh: np.ndarray, xj: np.ndarray | float) -> np.ndarray:
-        raise NotImplementedError
+        xj = np.atleast_1d(xj)
+        Xj = map_reference_domain(xj, self.domain, self.reference_domain)
+        return np.polynomial.chebyshev.chebval(Xj, uh)
 
     def inner_product(self, u: sp.Expr) -> np.ndarray:
         """Inner products (u, T_i), via the substitution x = cos(theta), integrating over
